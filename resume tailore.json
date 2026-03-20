@@ -1,0 +1,490 @@
+{
+  "name": "resume tailore",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Resume Tailor",
+        "formDescription": "Paste your LaTeX resume and job description below",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "job_input",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "applicant_name",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -192,
+        80
+      ],
+      "id": "1da5d43c-f19d-407f-89b7-3d44510e201f",
+      "name": "On form submission",
+      "webhookId": "0768d72b-9b37-49cb-b68c-49e311044f95"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a5a86ba3-cfa9-4674-8da6-0cf892242d8e",
+              "leftValue": "={{ $json.job_input }}",
+              "rightValue": "http",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        144,
+        80
+      ],
+      "id": "76d0e3b1-a4ef-42ea-a20d-cf4d0aee9f3d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('On form submission').item.json.job_input }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        -176
+      ],
+      "id": "52334f1f-f2f8-41cc-8b65-fafc0ef3a143",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\n\n// Remove scripts and style blocks\nlet clean = html.replace(/<script[\\s\\S]*?<\\/script>/gi, '');\nclean = clean.replace(/<style[\\s\\S]*?<\\/style>/gi, '');\n\n// Remove all remaining HTML tags\nclean = clean.replace(/<[^>]+>/g, ' ');\n\n// Decode common HTML entities\nclean = clean.replace(/&amp;/g, '&');\nclean = clean.replace(/&lt;/g, '<');\nclean = clean.replace(/&gt;/g, '>');\nclean = clean.replace(/&nbsp;/g, ' ');\nclean = clean.replace(/&#39;/g, \"'\");\nclean = clean.replace(/&quot;/g, '\"');\n\n// Collapse whitespace\nclean = clean.replace(/\\s+/g, ' ').trim();\n\n// Limit to first 3000 characters (enough for AI context)\nclean = clean.substring(0, 3000);\n\nreturn [{ json: { job_description_clean: clean } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -176
+      ],
+      "id": "8a75cbbd-b818-4c44-8e19-032b353a339a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        640,
+        96
+      ],
+      "id": "06289f28-fc52-4d9a-805f-a1372e785502",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "24b69456-1258-4663-9a3a-ee110aae73e5",
+              "name": "job_description",
+              "value": "={{ $('Resume Store').item.json.job_description }}",
+              "type": "string"
+            },
+            {
+              "id": "9e46146a-4153-49f4-96a7-efbb105f2c3c",
+              "name": "latex_resume",
+              "value": "={{ $('Resume Store').item.json.latex_resume }}",
+              "type": "string"
+            },
+            {
+              "id": "49c8ca8d-a9fc-4c35-b9bc-8b19e2e08382",
+              "name": "applicant_name",
+              "value": "={ $('Resume Store').item.json.applicant_name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        992,
+        80
+      ],
+      "id": "857f3575-8f4f-413b-92ad-794d9b28467b",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama-3.3-70b-versatile"
+            },
+            {
+              "name": "messages[0].role",
+              "value": "system"
+            },
+            {
+              "name": "messages[0].content",
+              "value": "You are an expert resume writer and LaTeX specialist with 10+ years of experience.  Your task is to tailor the provided LaTeX resume to match the job description.  STRICT RULES: 1. Return ONLY complete, executable LaTeX code — nothing else 2. No markdown, no backticks, no explanations, no comments 3. Start your response with \\documentclass and end with \\end{document} 4. Keep ALL packages from the original resume — do not remove any \\usepackage 5. Keep the EXACT same template structure and formatting 6. Keep ALL personal information exactly as provided (name, email, phone, LinkedIn, GitHub) 7. Never use placeholder text like \"ABC Company\" or \"XYZ University\" 8. Use ONLY real information from the original resume 9. You may enhance and expand on existing experience and projects to better match the job 10. Naturally weave in keywords from the job description 11. Make the candidate shine — strengthen descriptions, add relevant metrics, improve wording"
+            },
+            {
+              "name": "messages[1].role",
+              "value": "user"
+            },
+            {
+              "name": "messages[1].content",
+              "value": "={{ JSON.stringify(\"RESUME:\\n\" + $('Resume Store').item.json.latex_resume + \"\\n\\nJOB DESCRIPTION:\\n\" + $('Resume Store').item.json.job_description) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1200,
+        80
+      ],
+      "id": "f4cb88c1-d797-40d5-977c-26500da17fc0",
+      "name": "AI - Tailor Resume"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "becf7edb-d70e-45f6-b3a6-521130acda8f",
+              "name": "tailored_resume",
+              "value": "={{ $json.choices[0].message.content.replace(/```latex/g, '').replace(/```/g, '').trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1408,
+        80
+      ],
+      "id": "4cd8fdc7-03e1-4ccb-aaf8-a3adc9861d39",
+      "name": "Extract Resume Output"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama-3.3-70b-versatile"
+            },
+            {
+              "name": "messages[0].role",
+              "value": "system"
+            },
+            {
+              "name": "messages[0].content",
+              "value": "You are an expert career coach and professional cover letter writer. Write compelling, personalized cover letters that are concise, confident and human. Never use generic filler phrases. Return ONLY the cover letter text, no explanation, no subject line."
+            },
+            {
+              "name": "messages[1].role",
+              "value": "user"
+            },
+            {
+              "name": "messages[1].content",
+              "value": "={{ JSON.stringify(\"Write a cover letter for \" + $('Resume Store').item.json.applicant_name + \" applying for this job.\\n\\nJOB DESCRIPTION:\\n\" + $('Resume Store').item.json.job_description + \"\\n\\nRESUME:\\n\" + $('Resume Store').item.json.latex_resume) }}"
+            },
+            {
+              "name": "temperature",
+              "value": "={{ 0.8 }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "={{ 1000 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1600,
+        80
+      ],
+      "id": "567406ab-97cb-4b09-87d6-12dbcb2d6756",
+      "name": "AI - Cover Letter"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "04dac7f2-e531-48a7-b3e7-bcedc5ed6169",
+              "name": "cover_letter",
+              "value": "={{ $json.choices[0].message.content.split('\\\\n').join('\\n') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1776,
+        80
+      ],
+      "id": "37039e1d-80b2-4fd8-ac4f-90907f769640",
+      "name": "Extract Cover Letter Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "const coverLetter = $input.first().json.cover_letter;\n\nconst formatted = coverLetter\n  .split('\\\\n')\n  .join('\\n')\n  .trim();\n\nreturn [{ json: { cover_letter_formatted: formatted } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1936,
+        80
+      ],
+      "id": "b8e83426-6f43-4d5c-9a82-412b9ebdf487",
+      "name": "Format Cover Letter"
+    },
+    {
+      "parameters": {
+        "html": "<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial; max-width: 800px; margin: 40px auto; padding: 20px; }\n    h2 { color: #2c3e50; border-bottom: 2px solid #2c3e50; }\n    pre { background: #f4f4f4; padding: 20px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; }\n    .section { margin-bottom: 40px; }\n  </style>\n</head>\n<body>\n  <h1>✅ Your Application Materials</h1>\n  <div class=\"section\">\n    <h2>📄 Tailored LaTeX Resume</h2>\n    <pre>{{ $('Extract Resume Output').item.json.tailored_resume }}</pre>\n  </div>\n  <div class=\"section\">\n    <h2>✉️ Cover Letter</h2>\n    <pre>{{ $('Extract Cover Letter Output').item.json.cover_letter }}</pre>\n  </div>\n</body>\n</html>"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        2112,
+        80
+      ],
+      "id": "9ff2b351-f4d4-4938-a32b-921388950073",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store resume as raw string using String.raw\nconst myResume = String.raw`\\documentclass[11pt,letterpaper]{article}\n\\usepackage[letterpaper,margin=0.5in]{geometry}\n\\usepackage[utf8]{inputenc}\n\\usepackage[default]{lato}\n\\usepackage[T1]{fontenc}\n\\usepackage{textcomp}\n\\usepackage{enumitem}\n\\usepackage{hyperref}\n\\hypersetup{\n    colorlinks=true,\n    urlcolor=black,\n}\n\\pagestyle{empty}\n\n\\begin{document}\n\n\\begin{center}\n{\\LARGE \\textbf{Assil Khaldi}}\\\\\nCustomer Experience Specialist | Technical Support | Remote Collaboration\n\\end{center}\n\n\\noindent\n\\makebox[\\textwidth][s]{%\n\\begin{minipage}[t]{0.5\\textwidth}\n\\raggedright\n\\textbf{Email:} \\href{mailto:khaldi.assil40@gmail.com}{khaldi.assil40@gmail.com}\n\\end{minipage}\n\\begin{minipage}[t]{0.5\\textwidth}\n\\raggedleft\n\\textbf{Phone:} +216 58 868 269\n\\end{minipage}\n}\n\n\\noindent\n\\makebox[\\textwidth][s]{%\n\\begin{minipage}[t]{0.5\\textwidth}\n\\raggedright\n\\textbf{GitHub:} \\href{https://github.com/Assil10}{github.com/Assil10}\n\\end{minipage}\n\\begin{minipage}[t]{0.5\\textwidth}\n\\raggedleft\n\\textbf{LinkedIn:} \\href{https://www.linkedin.com/in/assilkhaldi/}{linkedin.com/in/AssilKhaldi}\n\\end{minipage}\n}\n\n\\vspace{0.1cm}\n\\hrule\n\\vspace{-0.4cm}\n\n\\subsection*{\\Large Professional Summary}\n\\vspace{-0.2cm}\n\nCustomer-oriented professional with strong communication and problem-solving skills, experienced in working with international teams and remote collaboration environments. Adept at handling client inquiries, troubleshooting technical issues, and delivering clear and solution-driven communication via email, chat, and online platforms.\n\nBackground in technology and software development provides a strong analytical mindset, enabling efficient issue resolution and the ability to understand complex systems quickly. Highly organized, reliable, and motivated to deliver excellent customer experiences while continuously learning and improving.\n\n\\vspace{0.2cm}\n\\hrule\n\\vspace{-0.4cm}\n\n\\subsection*{\\Large Professional Experience}\n\\vspace{-0.2cm}\n\n\\begin{itemize}[leftmargin=1em,noitemsep,topsep=0pt]\n\n\\item \\textbf{Technical Support \\& Client Collaboration -- KZ IT Services} \\hfill \\textit{Feb 2025 -- Jun 2025}\n\n\\begin{itemize}[label=--,leftmargin=2em,noitemsep]\n\\item Communicated with team members and stakeholders to resolve technical issues efficiently.\n\\item Provided support and troubleshooting during development cycles.\n\\item Participated in daily standups using remote communication tools.\n\\item Assisted in translating technical requirements into clear responses.\n\\item Managed multiple tasks while maintaining high attention to detail.\n\\end{itemize}\n\n\\item \\textbf{Client-Focused Project Collaboration -- Korpor Investment Platform} \\hfill \\textit{Jan 2025 -- Jun 2025}\n\n\\begin{itemize}[label=--,leftmargin=2em,noitemsep]\n\\item Worked closely with project teams to ensure features aligned with user needs.\n\\item Assisted in testing and improving user experience.\n\\item Collaborated in a fast-paced Agile environment.\n\\item Helped maintain efficient workflows between developers and stakeholders.\n\\end{itemize}\n\n\\end{itemize}\n\n\\vspace{0.2cm}\n\\hrule\n\\vspace{-0.3cm}\n\n\\subsection*{\\Large Education}\n\\vspace{-0.2cm}\n\n\\begin{itemize}[leftmargin=1em,noitemsep,topsep=0pt]\n\n\\item \\textbf{Faculty of Sciences of Monastir (FSM)} \\hfill \\textit{Sept 2022 -- Jun 2025}\\\\\nBachelor's Degree in Computer Science\n\n\\item \\textbf{Mathematics Baccalaureate} \\hfill \\textit{2022}\\\\\nLycee Mixte Metlaoui\n\n\\end{itemize}\n\n\\vspace{0.2cm}\n\\hrule\n\\vspace{-0.3cm}\n\n\\subsection*{\\Large Technical Skills}\n\\vspace{-0.3cm}\n\n\\begin{itemize}[leftmargin=1em,noitemsep,topsep=0pt]\n\\item Web Technologies: HTML, CSS, JavaScript\n\\item Backend Technologies: Node.js, Python, PHP\n\\item Databases: MySQL, MongoDB\n\\item Tools: Git, Docker\n\\item Collaboration Tools: Slack, Zoom, Jira\n\\end{itemize}\n\n\\vspace{0.2cm}\n\\hrule\n\\vspace{0.3cm}\n\n\\noindent\n\\begin{minipage}[t]{0.32\\textwidth}\n\\centering\n\\textbf{\\Large Certifications}\\\\[0.1cm]\nPHP/Symfony Certification -- Udemy\\\\\nJavaScript -- Udemy\\\\\nPython for Data Science -- Coursera\\\\\nEF SET English Certificate -- C1\n\\end{minipage}\n\\hfill\n\\begin{minipage}[t]{0.32\\textwidth}\n\\centering\n\\textbf{\\Large Languages}\\\\[0.1cm]\nArabic: Native\\\\\nEnglish: Professional\\\\\nFrench: Professional\\\\\nSpanish: Intermediate\n\\end{minipage}\n\\hfill\n\\begin{minipage}[t]{0.32\\textwidth}\n\\centering\n\\textbf{\\Large Soft Skills}\\\\[0.1cm]\nStrong communication\\\\\nCustomer empathy\\\\\nProblem solving\\\\\nAdaptability\\\\\nTeam collaboration\n\\end{minipage}\n\n\\vspace{0.3cm}\n\\hrule\n\n\\end{document}`;\n\nreturn [{\n  json: {\n    latex_resume: myResume,\n    job_description: $input.first().json.job_input,\n    applicant_name: $input.first().json.applicant_name,\n    \n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        288
+      ],
+      "id": "883a662b-b4cd-4310-8f93-b03d511cb47f",
+      "name": "Resume Store"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Resume Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI - Tailor Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI - Tailor Resume": {
+      "main": [
+        [
+          {
+            "node": "Extract Resume Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Resume Output": {
+      "main": [
+        [
+          {
+            "node": "AI - Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI - Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "Extract Cover Letter Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Cover Letter Output": {
+      "main": [
+        [
+          {
+            "node": "Format Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Store": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d9cbe78f-e55d-42e2-b3cf-54e80e766a64",
+  "meta": {
+    "instanceId": "101e93111e70854642843e467740ca7351a6af0b5fe409ab60d062c7dea93295"
+  },
+  "id": "DJLopf1j4DFxbrZk",
+  "tags": []
+}
